@@ -75,7 +75,6 @@ def _process_utterance(out_dir, index, wav_path, pinyin):
   f0_filename = 'thchs30-f0-%05d.npy' % index
   sp_filename = 'thchs30-sp-%05d.npy' % index
   ap_filename = 'thchs30-ap-%05d.npy' % index
-  np.reshape(f0, (-1, 1))
   np.save(os.path.join(out_dir, f0_filename), f0, allow_pickle=False)
   np.save(os.path.join(out_dir, sp_filename), sp, allow_pickle=False)
   np.save(os.path.join(out_dir, ap_filename), sp, allow_pickle=False)

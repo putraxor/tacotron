@@ -37,7 +37,6 @@ class Tacotron():
       batch_size = tf.shape(inputs)[0]
       hp = self._hparams
       target_depth = hp.num_f0 + hp.num_sp + hp.num_ap
-      # decoder_targets = tf.concat([f0_targets, sp_targets, ap_targets], axis=-1)
       decoder_targets = tf.concat([tf.expand_dims(f0_targets, axis=-1), sp_targets, ap_targets], axis=-1)
 
       # Embeddings
@@ -87,8 +86,7 @@ class Tacotron():
       decoder_outputs = tf.reshape(decoder_outputs, [batch_size, -1, target_depth])      # [N, T_out, M]
       stop_token_outputs = tf.reshape(stop_token_outputs, [batch_size, -1])                                   # [N, T_out, M]
 
-      # f0_outputs = decoder_outputs[:, :, 0]
-      f0_outputs = tf.squeeze(decoder_outputs[:, :, 0])
+      f0_outputs = decoder_outputs[:, :, 0]
       sp_outputs = decoder_outputs[:, :, 1 : 1 + hp.num_sp]
       ap_outputs = decoder_outputs[:, :, 1 + hp.num_sp:]
 
@@ -115,9 +113,12 @@ class Tacotron():
       log('  F0 out (1 frame):   {}'.format(f0_outputs.shape))
       log('  spectral envelop out (1 frame):   {}'.format(sp_outputs.shape))
       log('  aperioidicity out (1 frame):   {}'.format(ap_outputs.shape))
-      #log('  postnet out:             {}'.format(post_outputs.shape))
-      #log('  linear out:              {}'.format(linear_outputs.shape))
       log('  stop token:              {}'.format(stop_token_outputs.shape))
+      log('  decoder targets (r frames):  {}'.format(decoder_targets.shape))
+      log('  f0 targets:              {}'.format(f0_targets.shape))
+      log('  sp targets:              {}'.format(sp_targets.shape))
+      log('  ap targets:              {}'.format(ap_targets.shape))
+      log('  stop token targets:      {}'.format(stop_token_targets.shape))
 
 
   def add_loss(self):
@@ -131,18 +132,12 @@ class Tacotron():
                                             labels=self.stop_token_targets,
                                             logits=self.stop_token_outputs))
 
-      #l1 = tf.abs(self.linear_targets - self.linear_outputs)
-      # Prioritize loss for frequencies under 4000 Hz.
-      #n_priority_freq = int(4000 / (hp.sample_rate * 0.5) * hp.num_freq)
-      #self.linear_loss = 0.5 * tf.reduce_mean(l1) + 0.5 * tf.reduce_mean(l1[:,:,0:n_priority_freq])
-
       # Compute the regularization weights
       reg_weight = 1e-6
       all_vars = tf.trainable_variables()
       self.regularization_loss = tf.add_n([tf.nn.l2_loss(v) for v in all_vars
         if not('bias' in v.name or 'Bias' in v.name)]) * reg_weight
 
-      #self.loss = self.mel_loss + self.linear_loss + self.stop_token_loss + self.regularization_loss
       self.loss = self.f0_loss + self.sp_loss + self.ap_loss + self.stop_token_loss + self.regularization_loss
 
 

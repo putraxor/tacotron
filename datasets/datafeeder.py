@@ -143,7 +143,7 @@ def _prepare_inputs(inputs):
 
 
 def _prepare_f0_targets(targets, alignment):
-  max_len = max((len(t) for t in targets))
+  max_len = max((len(t) for t in targets)) + 1
   return np.stack([_pad_input(t, _round_up(max_len, alignment)) for t in targets])
 
 
