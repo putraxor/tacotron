@@ -7,13 +7,11 @@ import subprocess
 import time
 import tensorflow as tf
 import traceback
-import pyworld as vocoder
-import soundfile as sf
 from datasets.datafeeder import DataFeeder
 from hparams import hparams, hparams_debug_string
 from models import create_model
 from text import sequence_to_text
-from util import infolog, plot, ValueWindow
+from util import audio, infolog, plot, ValueWindow
 log = infolog.log
 
 
@@ -119,8 +117,8 @@ def train(log_dir, args):
           log('Saving audio and alignment...')
           input_seq, f0, sp, ap, alignment = sess.run([
             model.inputs[0], model.f0_outputs[0], model.sp_outputs[0], model.ap_outputs[0], model.alignments[0]])
-          waveform = vocoder.synthesize(f0, sp, ap, hparams.sample_rate)
-          sf.write(os.path.join(log_dir, 'step-%d-audio.wav' % step), waveform, hprams.sample_rate)
+          waveform = audio.synthesize(f0, sp, ap)
+          audio.save_wav(waveform, os.path.join(log_dir, 'step-%d-audio.wav' % step))
           plot.plot_alignment(alignment, os.path.join(log_dir, 'step-%d-align.png' % step),
             info='%s, %s, %s, step=%d, loss=%.5f' % (args.model, commit, time_string(), step, loss))
           log('Input: %s' % sequence_to_text(input_seq))

@@ -14,6 +14,10 @@ hparams = tf.contrib.training.HParams(
   sample_rate=48000,
   max_frame_num=1000,
   frame_shift_ms=12.5,
+  ref_level_db=100.,
+  max_f0_value=750.,
+  max_ap_value=1.,
+  max_abs_value=4.,
 
   # Model:
   outputs_per_step=5,

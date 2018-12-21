@@ -4,9 +4,8 @@ import numpy as np
 import os
 import glob
 from hparams import hparams as hp
-import librosa
-import soundfile as sf
-import pyworld as vocoder
+from util import audio
+
 
 def build_from_path(in_dir, out_dir, num_workers=1, tqdm=lambda x: x):
   '''Preprocesses the THCHS30 dataset from a given input path into a given output directory.
@@ -56,20 +55,27 @@ def _process_utterance(out_dir, index, wav_path, pinyin):
   '''
 
   # Load the audio to a numpy array:
-  wav, fs = sf.read(wav_path)
+  wav = audio.load_wav(wav_path)
 
   # rescale wav for unified measure for all clips
-  if np.abs(wav).max() > 1.0:
-    wav = wav / np.abs(wav).max() * 0.999
+  wav = wav / np.abs(wav).max() * 0.999
 
   # trim silence
-  wav = librosa.effects.trim(wav, top_db= 60, frame_length=512, hop_length=128)[0]
+  wav = audio.trim_silence(wav)
 
-  # num_sp = fft_size // 2 + 1
-  f0, sp, ap = vocoder.wav2world(wav, fs, 2 * (hp.num_sp - 1))
+  # feature extraction
+  f0, sp, ap = audio.feature_extract(wav)
   n_frames = len(f0)
   if n_frames > hp.max_frame_num:
     return None
+
+  # feature normalization
+  f0 = audio.f0_normalize(f0)
+  sp = audio.sp_normalize(sp)
+  ap = audio.ap_normalize(ap)
+  assert(np.min(f0) >= -4.0 and np.max(f0) <= 4.0)
+  assert(np.min(sp) >= -4.0 and np.max(sp) <= 4.0)
+  assert(np.min(ap) >= -4.0 and np.max(ap) <= 4.0)
 
   # Write the spectrograms to disk:
   f0_filename = 'thchs30-f0-%05d.npy' % index
@@ -77,7 +83,7 @@ def _process_utterance(out_dir, index, wav_path, pinyin):
   ap_filename = 'thchs30-ap-%05d.npy' % index
   np.save(os.path.join(out_dir, f0_filename), f0, allow_pickle=False)
   np.save(os.path.join(out_dir, sp_filename), sp, allow_pickle=False)
-  np.save(os.path.join(out_dir, ap_filename), sp, allow_pickle=False)
+  np.save(os.path.join(out_dir, ap_filename), ap, allow_pickle=False)
 
   # Return a tuple describing this training example:
   return (f0_filename, sp_filename, ap_filename, n_frames, pinyin)
