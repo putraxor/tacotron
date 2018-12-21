@@ -27,9 +27,9 @@ def feature_extract(wav):
   return vocoder.wav2world(wav, hp.sample_rate, fft_size)
 
 def synthesize(f0, sp, ap):
-  _f0 = f0_denormalize(f0)
-  _sp = sp_denormalize(sp)
-  _ap = ap_denormalize(ap)
+  _f0 = np.float64(f0_denormalize(f0))
+  _sp = np.float64(sp_denormalize(sp))
+  _ap = np.float64(ap_denormalize(ap))
   return vocoder.synthesize(_f0, _sp, _ap, hp.sample_rate)
 
 def _amp_to_db(x):
