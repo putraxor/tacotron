@@ -6,7 +6,7 @@ from librosa import effects
 from models import create_model
 from text import text_to_sequence
 from util import audio
-
+import pyworld as vocoder
 
 class Synthesizer:
   def load(self, checkpoint_path, model_name='tacotron'):
@@ -32,8 +32,8 @@ class Synthesizer:
       self.model.inputs: [np.asarray(seq, dtype=np.int32)],
       self.model.input_lengths: np.asarray([len(seq)], dtype=np.int32)
     }
-    wav = self.session.run(self.wav_output, feed_dict=feed_dict)
-    wav = audio.inv_preemphasis(wav)
+    f0, sp, ap = self.session.run(self.f0_outputs[0], self.sp_outputs[0], self.ap_outputs[0], feed_dict=feed_dict)
+    wav = vocoder.synthesize(f0, sp, ap, hpaprams.sample_rate)
     out = io.BytesIO()
     audio.save_wav(wav, out)
     return out.getvalue()

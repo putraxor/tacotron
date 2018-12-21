@@ -13,7 +13,7 @@ from hparams import hparams as hp
 class FrameProjection:
   """Projection layer to r * num_mels dimensions or num_mels dimensions
   """
-  def __init__(self, shape=hp.num_mels, activation=None, scope=None):
+  def __init__(self, shape=0, activation=None, scope=None):
     """
     Args:
       shape: integer, dimensionality of output space (r*n_mels for decoder or n_mels for postnet)

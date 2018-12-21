@@ -7,12 +7,13 @@ import subprocess
 import time
 import tensorflow as tf
 import traceback
-
+import pyworld as vocoder
+import soundfile as sf
 from datasets.datafeeder import DataFeeder
 from hparams import hparams, hparams_debug_string
 from models import create_model
 from text import sequence_to_text
-from util import audio, infolog, plot, ValueWindow
+from util import infolog, plot, ValueWindow
 log = infolog.log
 
 
@@ -25,12 +26,15 @@ def get_git_commit():
 
 def add_stats(model):
   with tf.variable_scope('stats') as scope:
-    tf.summary.histogram('linear_outputs', model.linear_outputs)
-    tf.summary.histogram('linear_targets', model.linear_targets)
-    tf.summary.histogram('mel_outputs', model.mel_outputs)
-    tf.summary.histogram('mel_targets', model.mel_targets)
-    tf.summary.scalar('loss_mel', model.mel_loss)
-    tf.summary.scalar('loss_linear', model.linear_loss)
+    tf.summary.histogram('f0_outputs', model.f0_outputs)
+    tf.summary.histogram('sp_outputs', model.sp_outputs)
+    tf.summary.histogram('ap_outputs', model.ap_outputs)
+    tf.summary.histogram('f0_targets', model.f0_targets)
+    tf.summary.histogram('sp_targets', model.sp_targets)
+    tf.summary.histogram('ap_targets', model.ap_targets)
+    tf.summary.scalar('loss_f0', model.f0_loss)
+    tf.summary.scalar('loss_sp', model.sp_loss)
+    tf.summary.scalar('loss_ap', model.ap_loss)
     tf.summary.scalar('regularization_loss', model.regularization_loss)
     tf.summary.scalar('stop_token_loss', model.stop_token_loss)
     tf.summary.scalar('learning_rate', model.learning_rate)
@@ -63,7 +67,7 @@ def train(log_dir, args):
   global_step = tf.Variable(0, name='global_step', trainable=False)
   with tf.variable_scope('model') as scope:
     model = create_model(args.model, hparams)
-    model.initialize(feeder.inputs, feeder.input_lengths, feeder.mel_targets, feeder.linear_targets, feeder.stop_token_targets, global_step)
+    model.initialize(feeder.inputs, feeder.input_lengths, feeder.f0_targets, feeder.sp_targets, feeder.ap_targets, feeder.stop_token_targets, global_step)
     model.add_loss()
     model.add_optimizer(global_step)
     stats = add_stats(model)
@@ -113,10 +117,10 @@ def train(log_dir, args):
           log('Saving checkpoint to: %s-%d' % (checkpoint_path, step))
           saver.save(sess, checkpoint_path, global_step=step)
           log('Saving audio and alignment...')
-          input_seq, spectrogram, alignment = sess.run([
-            model.inputs[0], model.linear_outputs[0], model.alignments[0]])
-          waveform = audio.inv_spectrogram(spectrogram.T)
-          audio.save_wav(waveform, os.path.join(log_dir, 'step-%d-audio.wav' % step))
+          input_seq, f0, sp, ap, alignment = sess.run([
+            model.inputs[0], model.f0_outputs[0], model.sp_outputs[0], model.ap_outputs[0], model.alignments[0]])
+          waveform = vocoder.synthesize(f0, sp, ap, hparams.sample_rate)
+          sf.write(os.path.join(log_dir, 'step-%d-audio.wav' % step), waveform, hprams.sample_rate)
           plot.plot_alignment(alignment, os.path.join(log_dir, 'step-%d-align.png' % step),
             info='%s, %s, %s, step=%d, loss=%.5f' % (args.model, commit, time_string(), step, loss))
           log('Input: %s' % sequence_to_text(input_seq))
@@ -145,6 +149,7 @@ def main():
   parser.add_argument('--git', action='store_true', help='If set, verify that the client is clean.')
   args = parser.parse_args()
   os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(args.tf_log_level)
+  os.environ['CUDA_VISIBLE_DEVICES'] = '0'
   run_name = args.name or args.model
   log_dir = os.path.join(args.base_dir, 'logs-%s' % run_name)
   os.makedirs(log_dir, exist_ok=True)
