@@ -32,7 +32,7 @@ def synthesize(f0, sp, ap):
   ap = ap_denormalize(ap)
   _f0 = np.float64(np.where(f0 < 20, 0.0, f0))
   _sp = np.float64(sp)
-  _ap = np.float64(ap / ap)
+  _ap = np.float64(np.clip(ap, 0.001, 1.0))
   return vocoder.synthesize(_f0, _sp, _ap, hp.sample_rate)
 
 def _amp_to_db(x):

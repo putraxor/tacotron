@@ -24,7 +24,7 @@ class Synthesizer:
     saver.restore(self.session, checkpoint_path)
 
 
-  def synthesize(self, text):
+  def synthesize(self, text, path):
     cleaner_names = [x.strip() for x in hparams.cleaners.split(',')]
     seq = text_to_sequence(text, cleaner_names)
     feed_dict = {
@@ -33,6 +33,4 @@ class Synthesizer:
     }
     f0, sp, ap = self.session.run([self.model.f0_outputs[0], self.model.sp_outputs[0], self.model.ap_outputs[0]], feed_dict=feed_dict)
     wav = audio.synthesize(f0, sp, ap)
-    out = io.BytesIO()
-    audio.save_wav(wav, out)
-    return out.getvalue()
+    audio.save_wav(wav, path)

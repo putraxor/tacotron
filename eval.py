@@ -41,8 +41,7 @@ def run_eval(args):
   for i, text in enumerate(sentences):
     path = '%s-%03d.wav' % (base_path, i)
     print('Synthesizing: %s' % path)
-    with open(path, 'wb') as f:
-      f.write(synth.synthesize(text))
+    synth.synthesize(text, path)
 
 
 def main():
