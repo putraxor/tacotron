@@ -37,7 +37,6 @@ class Tacotron():
       batch_size = tf.shape(inputs)[0]
       hp = self._hparams
       target_depth = hp.num_f0 + hp.num_sp + hp.num_ap
-      decoder_targets = tf.concat([tf.expand_dims(f0_targets, axis=-1), sp_targets, ap_targets], axis=-1)
 
       # Embeddings
       embedding_table = tf.get_variable(
@@ -69,6 +68,7 @@ class Tacotron():
                                             frame_projection, stop_projection)
 
       if is_training:
+        decoder_targets = tf.concat([tf.expand_dims(f0_targets, axis=-1), sp_targets, ap_targets], axis=-1)
         helper = TacoTrainingHelper(inputs, decoder_targets, target_depth, hp.outputs_per_step, global_step)
       else:
         helper = TacoTestHelper(batch_size, target_depth, hp.outputs_per_step)
@@ -114,10 +114,6 @@ class Tacotron():
       log('  sp out (1 frame):        {}'.format(sp_outputs.shape))
       log('  ap out (1 frame):        {}'.format(ap_outputs.shape))
       log('  stop token:              {}'.format(stop_token_outputs.shape))
-      log('  f0 targets:              {}'.format(tf.expand_dims(f0_targets, axis=-1).shape))
-      log('  sp targets:              {}'.format(sp_targets.shape))
-      log('  ap targets:              {}'.format(ap_targets.shape))
-      log('  stop token targets:      {}'.format(stop_token_targets.shape))
 
 
   def add_loss(self):
