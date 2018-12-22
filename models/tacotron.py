@@ -83,16 +83,17 @@ class Tacotron():
       alignments = tf.transpose(final_decoder_state.alignment_history.stack(), [1, 2, 0])
 
       # Reshape outputs to be one output per entry
-      decoder_outputs = tf.reshape(decoder_outputs, [batch_size, -1, target_depth])      # [N, T_out, M]
-      stop_token_outputs = tf.reshape(stop_token_outputs, [batch_size, -1])                                   # [N, T_out, M]
-
-      f0_outputs = decoder_outputs[:, :, 0]
-      sp_outputs = decoder_outputs[:, :, 1 : 1 + hp.num_sp]
-      ap_outputs = decoder_outputs[:, :, 1 + hp.num_sp:]
+      decoder_outputs = tf.reshape(decoder_outputs, [batch_size, -1, target_depth])                # [N, T_out, M]
+      stop_token_outputs = tf.reshape(stop_token_outputs, [batch_size, -1])                        # [N, T_out, M]
 
       # Add post-processing CBHG:
-      # post_outputs = post_cbhg(mel_outputs, hp.num_mels, is_training, hp.postnet_depth)            # [N, T_out, postnet_depth=256]
-      # linear_outputs = tf.layers.dense(post_outputs, hp.num_freq)                                  # [N, T_out, F]
+      post_outputs = post_cbhg(decoder_outputs, target_depth, is_training, hp.postnet_depth)       # [N, T_out, postnet_depth=256]
+      final_outputs = tf.layers.dense(post_outputs, target_depth)                                  # [N, T_out, F]
+
+      # seperation
+      f0_outputs = final_outputs[:, :, 0]
+      sp_outputs = final_outputs[:, :, 1 : 1 + hp.num_sp]
+      ap_outputs = final_outputs[:, :, 1 + hp.num_sp:]
 
       self.inputs = inputs
       self.input_lengths = input_lengths
