@@ -37,21 +37,21 @@ class DataFeeder(threading.Thread):
     self._placeholders = [
       tf.placeholder(tf.int32, [None, None], 'inputs'),
       tf.placeholder(tf.int32, [None], 'input_lengths'),
-      tf.placeholder(tf.float32, [None, None], 'f0_targets'),
-      tf.placeholder(tf.float32, [None, None, hparams.num_sp], 'sp_targets'),
-      tf.placeholder(tf.float32, [None, None, hparams.num_ap], 'ap_targets'),
+      tf.placeholder(tf.float32, [None, None], 'lf0_targets'),
+      tf.placeholder(tf.float32, [None, None, hparams.n_mgc], 'mgc_targets'),
+      tf.placeholder(tf.float32, [None, None, hparams.n_ap], 'bap_targets'),
       tf.placeholder(tf.float32, [None, None], 'stop_token_targets')
     ]
 
     # Create queue for buffering data:
     queue = tf.FIFOQueue(8, [tf.int32, tf.int32, tf.float32, tf.float32, tf.float32, tf.float32], name='input_queue')
     self._enqueue_op = queue.enqueue(self._placeholders)
-    self.inputs, self.input_lengths, self.f0_targets, self.sp_targets, self.ap_targets, self.stop_token_targets = queue.dequeue()
+    self.inputs, self.input_lengths, self.lf0_targets, self.mgc_targets, self.bap_targets, self.stop_token_targets = queue.dequeue()
     self.inputs.set_shape(self._placeholders[0].shape)
     self.input_lengths.set_shape(self._placeholders[1].shape)
-    self.f0_targets.set_shape(self._placeholders[2].shape)
-    self.sp_targets.set_shape(self._placeholders[3].shape)
-    self.ap_targets.set_shape(self._placeholders[4].shape)
+    self.lf0_targets.set_shape(self._placeholders[2].shape)
+    self.mgc_targets.set_shape(self._placeholders[3].shape)
+    self.bap_targets.set_shape(self._placeholders[4].shape)
     self.stop_token_targets.set_shape(self._placeholders[5].shape)
 
     # Load CMUDict: If enabled, this will randomly substitute some words in the training data with
@@ -102,7 +102,7 @@ class DataFeeder(threading.Thread):
 
 
   def _get_next_example(self):
-    '''Loads a single example (input, f0_target, sp_target, ap_target, stop_token_target) from disk'''
+    '''Loads a single example (input, lf0_target, mgc_target, bap_target, stop_token_target) from disk'''
     if self._offset >= len(self._metadata):
       self._offset = 0
       random.shuffle(self._metadata)
@@ -114,11 +114,11 @@ class DataFeeder(threading.Thread):
       text = ' '.join([self._maybe_get_arpabet(word) for word in text.split(' ')])
 
     input_data = np.asarray(text_to_sequence(text, self._cleaner_names), dtype=np.int32)
-    f0_target = np.load(os.path.join(self._datadir, meta[0]))
-    sp_target = np.load(os.path.join(self._datadir, meta[1]))
-    ap_target = np.load(os.path.join(self._datadir, meta[2]))
-    stop_token_target = np.asarray([0.] * len(f0_target))
-    return (input_data, f0_target, sp_target, ap_target, stop_token_target, len(sp_target))
+    lf0_target = np.load(os.path.join(self._datadir, meta[0]))
+    mgc_target = np.load(os.path.join(self._datadir, meta[1]))
+    bap_target = np.load(os.path.join(self._datadir, meta[2]))
+    stop_token_target = np.asarray([0.] * len(lf0_target))
+    return (input_data, lf0_target, mgc_target, bap_target, stop_token_target, len(mgc_target))
 
 
   def _maybe_get_arpabet(self, word):
@@ -130,11 +130,11 @@ def _prepare_batch(batch, outputs_per_step):
   random.shuffle(batch)
   inputs = _prepare_inputs([x[0] for x in batch])
   input_lengths = np.asarray([len(x[0]) for x in batch], dtype=np.int32)
-  f0_targets = _prepare_f0_targets([x[1] for x in batch], outputs_per_step)
-  sp_targets = _prepare_targets([x[2] for x in batch], outputs_per_step)
-  ap_targets = _prepare_targets([x[3] for x in batch], outputs_per_step)
+  lf0_targets = _prepare_lf0_targets([x[1] for x in batch], outputs_per_step)
+  mgc_targets = _prepare_targets([x[2] for x in batch], outputs_per_step)
+  bap_targets = _prepare_targets([x[3] for x in batch], outputs_per_step)
   stop_token_targets = _prepare_stop_token_targets([x[4] for x in batch], outputs_per_step)
-  return (inputs, input_lengths, f0_targets, sp_targets, ap_targets, stop_token_targets)
+  return (inputs, input_lengths, lf0_targets, mgc_targets, bap_targets, stop_token_targets)
 
 
 def _prepare_inputs(inputs):
@@ -142,7 +142,7 @@ def _prepare_inputs(inputs):
   return np.stack([_pad_input(x, max_len) for x in inputs])
 
 
-def _prepare_f0_targets(targets, alignment):
+def _prepare_lf0_targets(targets, alignment):
   max_len = max((len(t) for t in targets)) + 1
   return np.stack([_pad_input(t, _round_up(max_len, alignment)) for t in targets])
 

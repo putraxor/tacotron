@@ -15,7 +15,7 @@ class Tacotron():
     self._hparams = hparams
 
 
-  def initialize(self, inputs, input_lengths, f0_targets=None, sp_targets=None, ap_targets=None, stop_token_targets=None, global_step=None):
+  def initialize(self, inputs, input_lengths, lf0_targets=None, mgc_targets=None, bap_targets=None, stop_token_targets=None, global_step=None):
     '''Initializes the model for inference.
 
     Sets "mel_outputs", "linear_outputs", and "alignments" fields.
@@ -33,10 +33,10 @@ class Tacotron():
         spectrogram. Only needed for training.
     '''
     with tf.variable_scope('inference') as scope:
-      is_training = sp_targets is not None
+      is_training = mgc_targets is not None
       batch_size = tf.shape(inputs)[0]
       hp = self._hparams
-      target_depth = hp.num_f0 + hp.num_sp + hp.num_ap
+      target_depth = hp.n_f0 + hp.n_mgc + hp.n_ap
 
       # Embeddings
       embedding_table = tf.get_variable(
@@ -68,7 +68,7 @@ class Tacotron():
                                             frame_projection, stop_projection)
 
       if is_training:
-        decoder_targets = tf.concat([tf.expand_dims(f0_targets, axis=-1), sp_targets, ap_targets], axis=-1)
+        decoder_targets = tf.concat([tf.expand_dims(lf0_targets, axis=-1), mgc_targets, bap_targets], axis=-1)
         helper = TacoTrainingHelper(inputs, decoder_targets, target_depth, hp.outputs_per_step, global_step)
       else:
         helper = TacoTestHelper(batch_size, target_depth, hp.outputs_per_step)
@@ -87,33 +87,34 @@ class Tacotron():
       stop_token_outputs = tf.reshape(stop_token_outputs, [batch_size, -1])                        # [N, T_out, M]
 
       # Add post-processing CBHG:
-      post_outputs = post_cbhg(decoder_outputs, target_depth, is_training, hp.postnet_depth)       # [N, T_out, postnet_depth=256]
-      final_outputs = tf.layers.dense(post_outputs, target_depth)                                  # [N, T_out, F]
+      # post_outputs = post_cbhg(decoder_outputs, target_depth, is_training, hp.postnet_depth)       # [N, T_out, postnet_depth=256]
+      # final_outputs = tf.layers.dense(post_outputs, target_depth)                                  # [N, T_out, F]
 
       # seperation
-      f0_outputs = final_outputs[:, :, 0]
-      sp_outputs = final_outputs[:, :, 1 : 1 + hp.num_sp]
-      ap_outputs = final_outputs[:, :, 1 + hp.num_sp:]
+      lf0_outputs = decoder_outputs[:, :, 0]
+      mgc_outputs = decoder_outputs[:, :, 1 : 1 + hp.n_mgc]
+      bap_outputs = decoder_outputs[:, :, 1 + hp.n_mgc:]
 
       self.inputs = inputs
       self.input_lengths = input_lengths
-      self.f0_outputs = f0_outputs
-      self.sp_outputs = sp_outputs
-      self.ap_outputs = ap_outputs
+      self.lf0_outputs = lf0_outputs
+      self.mgc_outputs = mgc_outputs
+      self.bap_outputs = bap_outputs
+      self.world_outputs = decoder_outputs
       self.stop_token_outputs = stop_token_outputs
       self.alignments = alignments
-      self.f0_targets = f0_targets
-      self.sp_targets = sp_targets
-      self.ap_targets = ap_targets
+      self.lf0_targets = lf0_targets
+      self.mgc_targets = mgc_targets
+      self.bap_targets = bap_targets
       self.stop_token_targets = stop_token_targets
       log('Initialized Tacotron model. Dimensions: ')
       log('  embedding:               {}'.format(embedded_inputs.shape))
       log('  prenet out:              {}'.format(prenet_outputs.shape))
       log('  encoder out:             {}'.format(encoder_outputs.shape))
       log('  decoder out (r frames):  {}'.format(decoder_outputs.shape))
-      log('  F0 out (1 frame):        {}'.format(tf.expand_dims(f0_outputs, axis=-1).shape))
-      log('  sp out (1 frame):        {}'.format(sp_outputs.shape))
-      log('  ap out (1 frame):        {}'.format(ap_outputs.shape))
+      log('  lf0 out (1 frame):       {}'.format(tf.expand_dims(lf0_outputs, axis=-1).shape))
+      log('  mgc out (1 frame):       {}'.format(mgc_outputs.shape))
+      log('  bap out (1 frame):       {}'.format(bap_outputs.shape))
       log('  stop token:              {}'.format(stop_token_outputs.shape))
 
 
@@ -121,9 +122,11 @@ class Tacotron():
     '''Adds loss to the model. Sets "loss" field. initialize must have been called.'''
     with tf.variable_scope('loss') as scope:
       hp = self._hparams
-      self.f0_loss = tf.reduce_mean(tf.abs(self.f0_targets - self.f0_outputs))
-      self.sp_loss = tf.reduce_mean(tf.abs(self.sp_targets - self.sp_outputs))
-      self.ap_loss = tf.reduce_mean(tf.abs(self.ap_targets - self.ap_outputs))
+      self.world_targets = tf.concat([tf.expand_dims(self.lf0_targets, axis=-1), self.mgc_targets, self.bap_targets], axis=-1)
+      # self.lf0_loss = tf.reduce_mean(tf.abs(self.lf0_targets - self.lf0_outputs))
+      # self.mgc_loss = tf.reduce_mean(tf.abs(self.mgc_targets - self.mgc_outputs))
+      # self.bap_loss = tf.reduce_mean(tf.abs(self.bap_targets - self.bap_outputs))
+      self.world_loss = tf.reduce_mean(tf.abs(self.world_targets - self.world_outputs))
       self.stop_token_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
                                             labels=self.stop_token_targets,
                                             logits=self.stop_token_outputs))
@@ -134,7 +137,8 @@ class Tacotron():
       self.regularization_loss = tf.add_n([tf.nn.l2_loss(v) for v in all_vars
         if not('bias' in v.name or 'Bias' in v.name)]) * reg_weight
 
-      self.loss = self.f0_loss + self.sp_loss + self.ap_loss + self.stop_token_loss + self.regularization_loss
+      # self.loss = self.lf0_loss + self.mgc_loss + self.bap_loss + self.stop_token_loss + self.regularization_loss
+      self.loss = self.world_loss + self.stop_token_loss + self.regularization_loss
 
 
   def add_optimizer(self, global_step):

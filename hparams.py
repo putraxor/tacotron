@@ -8,16 +8,15 @@ hparams = tf.contrib.training.HParams(
   cleaners='basic_cleaners',
 
   # Audio:
-  num_f0=1,
-  num_sp=513,
-  num_ap=513,
+  fft_size=2048,
+  n_f0=1,
+  n_mgc=60,
+  n_sp=1025,
+  n_ap=5,
+  mcep_alpha=0.77, #0.58(16k) 0.65(22050) 0.76(44100)
   sample_rate=48000,
-  max_frame_num=1000,
-  frame_shift_ms=12.5,
-  ref_level_db=100.,
-  max_f0_value=750.,
-  max_ap_value=1.,
-  max_abs_value=4.,
+  max_frame_num=5000,
+  frame_shift_ms=5.5,
 
   # Model:
   outputs_per_step=5,
@@ -37,7 +36,7 @@ hparams = tf.contrib.training.HParams(
   use_cmudict=False,  # Use CMUDict during training to learn pronunciation of ARPAbet phonemes
 
   # Eval:
-  max_iters=300,
+  max_iters=1000,
 )
 
 

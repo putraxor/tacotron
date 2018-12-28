@@ -70,20 +70,24 @@ def _process_utterance(out_dir, index, wav_path, pinyin):
     return None
 
   # feature normalization
-  f0 = audio.f0_normalize(f0)
-  sp = audio.sp_normalize(sp)
-  ap = audio.ap_normalize(ap)
-  assert(np.min(f0) >= -4.0 and np.max(f0) <= 4.0)
-  assert(np.min(sp) >= -4.0 and np.max(sp) <= 4.0)
-  assert(np.min(ap) >= -4.0 and np.max(ap) <= 4.0)
+  lf0 = audio.f0_normalize(f0)
+  mgc = audio.sp_normalize(sp)
+  bap = audio.ap_normalize(ap)
+
+  lf0_file = 'lf0-%05d.npy' % index
+  mgc_file = 'mgc-%05d.npy' % index
+  bap_file = 'bap-%05d.npy' % index
+  np.save(os.path.join(out_dir, lf0_file), lf0, allow_pickle=False)
+  np.save(os.path.join(out_dir, mgc_file), mgc, allow_pickle=False)
+  np.save(os.path.join(out_dir, bap_file), bap, allow_pickle=False)
 
   # Write the spectrograms to disk:
-  f0_filename = 'thchs30-f0-%05d.npy' % index
-  sp_filename = 'thchs30-sp-%05d.npy' % index
-  ap_filename = 'thchs30-ap-%05d.npy' % index
-  np.save(os.path.join(out_dir, f0_filename), f0, allow_pickle=False)
-  np.save(os.path.join(out_dir, sp_filename), sp, allow_pickle=False)
-  np.save(os.path.join(out_dir, ap_filename), ap, allow_pickle=False)
+  # f0_filename = 'f0-%05d.npy' % index
+  # sp_filename = 'sp-%05d.npy' % index
+  # ap_filename = 'ap-%05d.npy' % index
+  # np.save(os.path.join(out_dir, f0_filename), f0, allow_pickle=False)
+  # np.save(os.path.join(out_dir, sp_filename), sp, allow_pickle=False)
+  # np.save(os.path.join(out_dir, ap_filename), ap, allow_pickle=False)
 
   # Return a tuple describing this training example:
-  return (f0_filename, sp_filename, ap_filename, n_frames, pinyin)
+  return (lf0_file, mgc_file, bap_file, n_frames, pinyin)

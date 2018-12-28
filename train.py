@@ -24,15 +24,16 @@ def get_git_commit():
 
 def add_stats(model):
   with tf.variable_scope('stats') as scope:
-    tf.summary.histogram('f0_outputs', model.f0_outputs)
-    tf.summary.histogram('sp_outputs', model.sp_outputs)
-    tf.summary.histogram('ap_outputs', model.ap_outputs)
-    tf.summary.histogram('f0_targets', model.f0_targets)
-    tf.summary.histogram('sp_targets', model.sp_targets)
-    tf.summary.histogram('ap_targets', model.ap_targets)
-    tf.summary.scalar('loss_f0', model.f0_loss)
-    tf.summary.scalar('loss_sp', model.sp_loss)
-    tf.summary.scalar('loss_ap', model.ap_loss)
+    tf.summary.histogram('lf0_outputs', model.lf0_outputs)
+    tf.summary.histogram('mgc_outputs', model.mgc_outputs)
+    tf.summary.histogram('bap_outputs', model.bap_outputs)
+    tf.summary.histogram('lf0_targets', model.lf0_targets)
+    tf.summary.histogram('mgc_targets', model.mgc_targets)
+    tf.summary.histogram('bap_targets', model.bap_targets)
+    tf.summary.scalar('loss_world', model.world_loss)
+    # tf.summary.scalar('loss_lf0', model.lf0_loss)
+    # tf.summary.scalar('loss_mgc', model.mgc_loss)
+    # tf.summary.scalar('loss_bap', model.bap_loss)
     tf.summary.scalar('regularization_loss', model.regularization_loss)
     tf.summary.scalar('stop_token_loss', model.stop_token_loss)
     tf.summary.scalar('learning_rate', model.learning_rate)
@@ -65,7 +66,7 @@ def train(log_dir, args):
   global_step = tf.Variable(0, name='global_step', trainable=False)
   with tf.variable_scope('model') as scope:
     model = create_model(args.model, hparams)
-    model.initialize(feeder.inputs, feeder.input_lengths, feeder.f0_targets, feeder.sp_targets, feeder.ap_targets, feeder.stop_token_targets, global_step)
+    model.initialize(feeder.inputs, feeder.input_lengths, feeder.lf0_targets, feeder.mgc_targets, feeder.bap_targets, feeder.stop_token_targets, global_step)
     model.add_loss()
     model.add_optimizer(global_step)
     stats = add_stats(model)
@@ -115,9 +116,9 @@ def train(log_dir, args):
           log('Saving checkpoint to: %s-%d' % (checkpoint_path, step))
           saver.save(sess, checkpoint_path, global_step=step)
           log('Saving audio and alignment...')
-          input_seq, f0, sp, ap, alignment = sess.run([
-            model.inputs[0], model.f0_outputs[0], model.sp_outputs[0], model.ap_outputs[0], model.alignments[0]])
-          waveform = audio.synthesize(f0, sp, ap)
+          input_seq, lf0, mgc, bap, alignment = sess.run([
+            model.inputs[0], model.lf0_outputs[0], model.mgc_outputs[0], model.bap_outputs[0], model.alignments[0]])
+          waveform = audio.synthesize(lf0, mgc, bap)
           audio.save_wav(waveform, os.path.join(log_dir, 'step-%d-audio.wav' % step))
           plot.plot_alignment(alignment, os.path.join(log_dir, 'step-%d-align.png' % step),
             info='%s, %s, %s, step=%d, loss=%.5f' % (args.model, commit, time_string(), step, loss))
