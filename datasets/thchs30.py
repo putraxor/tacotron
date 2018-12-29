@@ -78,13 +78,5 @@ def _process_utterance(out_dir, index, wav_path, pinyin):
   np.save(os.path.join(out_dir, mgc_file), mgc, allow_pickle=False)
   np.save(os.path.join(out_dir, bap_file), bap, allow_pickle=False)
 
-  # Write the spectrograms to disk:
-  # f0_filename = 'f0-%05d.npy' % index
-  # sp_filename = 'sp-%05d.npy' % index
-  # ap_filename = 'ap-%05d.npy' % index
-  # np.save(os.path.join(out_dir, f0_filename), f0, allow_pickle=False)
-  # np.save(os.path.join(out_dir, sp_filename), sp, allow_pickle=False)
-  # np.save(os.path.join(out_dir, ap_filename), ap, allow_pickle=False)
-
   # Return a tuple describing this training example:
   return (lf0_file, mgc_file, bap_file, n_frames, pinyin)

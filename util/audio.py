@@ -33,7 +33,6 @@ def synthesize(lf0, mgc, bap):
 
 def f0_normalize(x):
   return np.log(np.where(x == 0.0, 1.0, x)).astype(np.float32)
-  # return _normalize(x / hp.max_f0_value)
 
 def f0_denormalize(x):
   return np.where(x == 0.0, 0.0, np.exp(x.astype(np.float64)))
