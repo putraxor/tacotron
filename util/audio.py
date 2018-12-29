@@ -1,7 +1,7 @@
 import librosa
 import math
 import numpy as np
-import os, pysptk
+import pysptk
 import pyworld as vocoder
 import soundfile as sf
 import tensorflow as tf
@@ -10,14 +10,11 @@ from hparams import hparams as hp
 
 def load_wav(path):
   wav, _ = sf.read(path)
-  # rescale wav for unified measure for all clips
-  return wav / np.abs(wav).max() * 0.999
+  return wav
 
 def save_wav(wav, path):
   # rescaling for unified measure for all clips
-  wav = wav / np.abs(wav).max() * 0.999
-  # factor 0.5 in case of overflow for int16
-  factor = 0.5 * 32767 / max(0.01, np.max(np.abs(wav)))
+  # wav = wav / np.abs(wav).max() * 0.999
   sf.write(path, wav, hp.sample_rate)
 
 def trim_silence(wav):

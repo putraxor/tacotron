@@ -57,9 +57,6 @@ def _process_utterance(out_dir, index, wav_path, pinyin):
   # Load the audio to a numpy array:
   wav = audio.load_wav(wav_path)
 
-  # rescale wav for unified measure for all clips
-  wav = wav / np.abs(wav).max() * 0.999
-
   # trim silence
   wav = audio.trim_silence(wav)
 

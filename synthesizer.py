@@ -31,6 +31,6 @@ class Synthesizer:
       self.model.inputs: [np.asarray(seq, dtype=np.int32)],
       self.model.input_lengths: np.asarray([len(seq)], dtype=np.int32)
     }
-    f0, sp, ap = self.session.run([self.model.f0_outputs[0], self.model.sp_outputs[0], self.model.ap_outputs[0]], feed_dict=feed_dict)
-    wav = audio.synthesize(f0, sp, ap)
+    lf0, mgc, bap = self.session.run([self.model.lf0_outputs[0], self.model.mgc_outputs[0], self.model.bap_outputs[0]], feed_dict=feed_dict)
+    wav = audio.synthesize(lf0, mgc, bap)
     audio.save_wav(wav, path)
