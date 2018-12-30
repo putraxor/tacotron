@@ -8,9 +8,9 @@ hparams = tf.contrib.training.HParams(
   cleaners='basic_cleaners',
 
   # Audio:
-  num_mels=160,
-  num_freq=1025,
-  sample_rate=16000,
+  num_mels=80,
+  num_freq=2049,
+  sample_rate=48000,
   frame_length_ms=50,
   frame_shift_ms=12.5,
   preemphasis=0.97,

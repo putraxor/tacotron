@@ -26,13 +26,12 @@ def build_from_path(in_dir, out_dir, num_workers=1, tqdm=lambda x: x):
   futures = []
   index = 1
 
-  trn_files = glob.glob(os.path.join(in_dir, 'data', '*.trn'))
+  trn_files = glob.glob(os.path.join(in_dir, 'biaobei_48000', '*.trn'))
 
   for trn in trn_files:
     with open(trn) as f:
-      f.readline()
       pinyin = f.readline().strip('\n')
-      wav_file = trn[:-4]
+      wav_file = trn[:-4] + '.wav'
       task = partial(_process_utterance, out_dir, index, wav_file, pinyin)
       futures.append(executor.submit(task))
       index += 1
