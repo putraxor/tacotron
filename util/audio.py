@@ -18,7 +18,7 @@ def save_wav(wav, path):
   # factor 0.5 in case of overflow for int16
   f1 = 0.5 * 32767 / max(0.01, np.max(np.abs(wav)))
   # sublinear scaling as Y ~ X ^ k (k < 1)
-  f2 = np.sign(wav) * np.power(np.abs(wav), 0.667)
+  f2 = np.sign(wav) * np.power(np.abs(wav), 0.8)
   wav = f1 * f2
   # bandpass for less noises
   firwin = signal.firwin(hparams.num_freq, [hparams.fmin, hparams.fmax], pass_zero=False, fs=hparams.sample_rate)
